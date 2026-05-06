@@ -886,11 +886,13 @@ class FilterPress {
 			// inner overlap.
 			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
 			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
-			. '<feComponentTransfer in="displacedBorder" result="chewedBorderRaw">'
-			// Lenient threshold (alpha >= 0.5 → 1) keeps interpolated edge
-			// pixels — without it, sub-pixel sampling at depth>0 drops a
-			// ~1px ring of alpha-0.5 pixels around the edges, making the
-			// border appear to shrink suddenly when depth goes 0 → 1.
+			// Slight blur before the threshold ensures the alpha pattern is
+			// always anti-aliased — feDisplacementMap is exact at scale=0
+			// and bilinear at scale>0, which made the threshold behave
+			// differently and the border size appear to "jump" between
+			// depth 0 and 1. The blur removes that discontinuity.
+			. '<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>'
+			. '<feComponentTransfer in="softBorder" result="chewedBorderRaw">'
 			. '<feFuncA type="discrete" tableValues="0 0 1 1"/>'
 			. '</feComponentTransfer>'
 			// Clip the chewed border to the element box so chewed outer

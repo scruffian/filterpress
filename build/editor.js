@@ -1094,9 +1094,10 @@
 			// behind chewed retreats in the inner overlap.
 			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
 			'<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' + dep + '" result="displacedBorder"/>' +
-			'<feComponentTransfer in="displacedBorder" result="chewedBorderRaw">' +
-			// Lenient threshold (alpha >= 0.5 → 1) keeps interpolated edge
-			// pixels so the border doesn't shrink when depth changes 0 → 1.
+			// Slight blur before the threshold smooths the discontinuity
+			// between scale=0 (exact) and scale>0 (bilinear) sampling.
+			'<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>' +
+			'<feComponentTransfer in="softBorder" result="chewedBorderRaw">' +
 			'<feFuncA type="discrete" tableValues="0 0 1 1"/>' +
 			'</feComponentTransfer>' +
 			// Clip chewed border to element box — outer can't protrude past
