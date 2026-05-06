@@ -859,15 +859,6 @@ class FilterPress {
 		$bw         = esc_attr( (string) $bw_int );
 		$off        = esc_attr( (string) $offset_val );
 		$bw_off     = esc_attr( (string) ( $bw_int + $offset_val ) );
-		// Linear alpha threshold whose slope scales with depth — at dep=0
-		// it's identity (y=x) so depth=0 produces the un-modified ring;
-		// higher depths sharpen toward a step function for chewed jaggies.
-		// This avoids the discontinuity that discrete thresholds caused
-		// when depth crossed from 0 to >0.
-		$slope     = 1.0 + (float) $dep_val;
-		$intercept = -0.5 * ( $slope - 1.0 );
-		$slope_str = esc_attr( (string) round( $slope, 3 ) );
-		$int_str   = esc_attr( (string) round( $intercept, 3 ) );
 		$noise      = self::grunge_noise_svg( $style, $ruggedness );
 
 		// Pipeline:
@@ -895,8 +886,13 @@ class FilterPress {
 			// inner overlap.
 			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
 			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
-			. '<feComponentTransfer in="displacedBorder" result="chewedBorder">'
-			. '<feFuncA type="linear" slope="' . $slope_str . '" intercept="' . $int_str . '"/>'
+			// Constant blur + constant linear threshold: same edge sharpness
+			// at all depths. The displacement adds variation but doesn't
+			// change the underlying edge processing, so size stays constant
+			// across depth values.
+			. '<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>'
+			. '<feComponentTransfer in="softBorder" result="chewedBorder">'
+			. '<feFuncA type="linear" slope="8" intercept="-3.5"/>'
 			. '</feComponentTransfer>'
 			. '<feMerge>'
 			. '<feMergeNode in="imageContent"/>'

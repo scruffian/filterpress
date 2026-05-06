@@ -1072,13 +1072,6 @@
 		var bw = bwInt;
 		var off = offsetInt;
 		var bwOff = bwInt + offsetInt;
-		// Linear feFuncA whose slope scales with depth — at dep=0 it's
-		// identity (y=x), at higher depths it sharpens toward a step
-		// function. Avoids the discontinuity of discrete thresholds.
-		var slopeVal = 1 + depCapped;
-		var interceptVal = -0.5 * ( slopeVal - 1 );
-		var slopeStr = Math.round( slopeVal * 1000 ) / 1000;
-		var interceptStr = Math.round( interceptVal * 1000 ) / 1000;
 		// Cap displacement at 2*bw so the chewed border stays proportional
 		// to the user's CSS border width.
 		var depCapped = Math.min( depth, Math.max( 2 * borderWidth, 2 ) );
@@ -1101,8 +1094,12 @@
 			// behind chewed retreats in the inner overlap.
 			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
 			'<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' + dep + '" result="displacedBorder"/>' +
-			'<feComponentTransfer in="displacedBorder" result="chewedBorder">' +
-			'<feFuncA type="linear" slope="' + slopeStr + '" intercept="' + interceptStr + '"/>' +
+			// Constant blur + linear threshold: same edge sharpness at all
+			// depths. Displacement adds variation but doesn't change edge
+			// processing, so border size stays constant across depths.
+			'<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>' +
+			'<feComponentTransfer in="softBorder" result="chewedBorder">' +
+			'<feFuncA type="linear" slope="8" intercept="-3.5"/>' +
 			'</feComponentTransfer>' +
 			'<feMerge>' +
 			'<feMergeNode in="imageContent"/>' +
