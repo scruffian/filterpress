@@ -1121,7 +1121,10 @@
 	}
 
 	function grungeBaseShapeSVG( style ) {
-		if ( ! isGrungeMaskStyle( style ) ) {
+		// Only stamp clips the full image with its painted mask SVG; the
+		// brushy styles would crop the image into a paint blob, which
+		// looks wrong on a borderless image — they fall back to SourceAlpha.
+		if ( style !== 'stamp' ) {
 			return '';
 		}
 		var uri = grungeMaskDataUri( style );
@@ -1138,7 +1141,7 @@
 	}
 
 	function grungeChewInput( style ) {
-		return isGrungeMaskStyle( style ) ? 'baseShape' : 'SourceAlpha';
+		return style === 'stamp' ? 'baseShape' : 'SourceAlpha';
 	}
 
 	function buildGrungeBorderSVG( id, style, ruggedness, depth, borderWidth ) {

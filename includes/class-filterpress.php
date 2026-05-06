@@ -1068,7 +1068,10 @@ class FilterPress {
 	 * @return string
 	 */
 	private static function grunge_base_shape_svg( $style ) {
-		if ( ! self::grunge_is_mask_style( $style ) ) {
+		// Only stamp clips the full image with its painted mask SVG; the
+		// brushy styles would crop the image into a paint blob, which
+		// looks wrong on a borderless image — they fall back to SourceAlpha.
+		if ( 'stamp' !== $style ) {
 			return '';
 		}
 		$uri = esc_attr( self::grunge_mask_data_uri( $style ) );
@@ -1087,7 +1090,7 @@ class FilterPress {
 	 * @return string
 	 */
 	private static function grunge_chew_input( $style ) {
-		return self::grunge_is_mask_style( $style ) ? 'baseShape' : 'SourceAlpha';
+		return 'stamp' === $style ? 'baseShape' : 'SourceAlpha';
 	}
 
 	/**
