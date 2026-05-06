@@ -478,12 +478,13 @@
 					{ label: __( 'Torn', 'filterpress' ), value: 'torn' },
 					{ label: __( 'Brush', 'filterpress' ), value: 'brush' },
 					{ label: __( 'Splat', 'filterpress' ), value: 'splat' },
+					{ label: __( 'Burst', 'filterpress' ), value: 'burst' },
 					{ label: __( 'Stamp', 'filterpress' ), value: 'stamp' },
 				];
 				var grungeStyle =
 					grunge &&
 					typeof grunge.style === 'string' &&
-					[ 'torn', 'brush', 'splat', 'stamp' ].indexOf( grunge.style ) >= 0
+					[ 'torn', 'brush', 'splat', 'burst', 'stamp' ].indexOf( grunge.style ) >= 0
 						? grunge.style
 						: 'torn';
 
@@ -654,7 +655,7 @@
 			var grungeCanvasStyle =
 				grunge &&
 				typeof grunge.style === 'string' &&
-				[ 'torn', 'brush', 'splat', 'stamp' ].indexOf( grunge.style ) >= 0
+				[ 'torn', 'brush', 'splat', 'burst', 'stamp' ].indexOf( grunge.style ) >= 0
 					? grunge.style
 					: 'torn';
 			// hasGrunge is independent of depth — the filter still produces
@@ -964,7 +965,7 @@
 			'<feComponentTransfer in="displacedAlpha" result="mask">' +
 			// Brush passes alpha through (preserves mask opacity); torn
 			// and stamp use a hard threshold for sharp jagged edges.
-			( style === 'brush' || style === 'splat'
+			( style === 'brush' || style === 'splat' || style === 'burst'
 				? '<feFuncA type="identity"/>'
 				: '<feFuncA type="discrete" tableValues="0 0 0 1"/>' ) +
 			'</feComponentTransfer>' +
@@ -998,6 +999,16 @@
 					'<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>'
 				);
 			}
+			case 'burst': {
+				// Most extreme — extra-long streaks and 4 octaves.
+				var bsx = Math.round( r * 0.15 * 10000 ) / 10000;
+				var bsy = Math.round( Math.max( 0.25, r * 12 ) * 10000 ) / 10000;
+				return (
+					'<feTurbulence type="fractalNoise" baseFrequency="' + bsx + ' ' + bsy + '" numOctaves="4" seed="7" result="hNoise"/>' +
+					'<feTurbulence type="fractalNoise" baseFrequency="' + bsy + ' ' + bsx + '" numOctaves="4" seed="11" result="vNoise"/>' +
+					'<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>'
+				);
+			}
 			case 'stamp': {
 				var bs = Math.round( Math.max( 0.005, r * 0.35 ) * 10000 ) / 10000;
 				return (
@@ -1019,7 +1030,7 @@
 	}
 
 	function isGrungeMaskStyle( style ) {
-		return style === 'brush' || style === 'splat' || style === 'stamp';
+		return style === 'brush' || style === 'splat' || style === 'burst' || style === 'stamp';
 	}
 
 	function grungeMaskSVG( style ) {
@@ -1050,6 +1061,32 @@
 					'<circle opacity="0.4" cx="62" cy="200" r="1.5"/>' +
 					'<circle opacity="0.6" cx="190" cy="262" r="1.8"/>' +
 					'<circle opacity="0.4" cx="220" cy="270" r="1.2"/>' +
+					'</g>' +
+					'</svg>'
+				);
+			case 'burst':
+				return (
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" preserveAspectRatio="none">' +
+					'<g fill="#fff">' +
+					'<path opacity="0.85" d="M 78 195 C 82 158 115 148 148 158 C 178 162 208 178 235 165 C 265 158 295 175 318 168 C 340 178 352 200 340 222 C 322 240 285 226 255 232 C 220 240 188 226 158 234 C 128 232 100 244 82 230 C 65 215 70 205 78 195 Z"/>' +
+					'<path opacity="0.65" d="M 250 252 C 268 248 285 258 282 274 C 270 282 252 276 246 264 C 244 258 246 254 250 252 Z"/>' +
+					'<path opacity="0.55" d="M 332 188 C 352 184 368 192 365 210 L 340 215 Z"/>' +
+					'<path opacity="0.5" d="M 175 235 C 178 252 180 268 175 270 C 168 262 168 246 172 238 Z"/>' +
+					'<path opacity="0.5" d="M 105 232 C 100 245 95 252 90 248 C 88 240 92 232 100 230 Z"/>' +
+					'<path opacity="0.45" d="M 95 165 C 80 158 70 165 72 178 L 90 175 Z"/>' +
+					'<circle opacity="0.7" cx="370" cy="225" r="2.8"/>' +
+					'<circle opacity="0.55" cx="382" cy="232" r="1.8"/>' +
+					'<circle opacity="0.4" cx="392" cy="222" r="1.2"/>' +
+					'<circle opacity="0.6" cx="60" cy="190" r="2.5"/>' +
+					'<circle opacity="0.4" cx="48" cy="200" r="1.5"/>' +
+					'<circle opacity="0.5" cx="42" cy="180" r="1.2"/>' +
+					'<circle opacity="0.6" cx="220" cy="278" r="2"/>' +
+					'<circle opacity="0.4" cx="240" cy="288" r="1.5"/>' +
+					'<circle opacity="0.5" cx="155" cy="285" r="1.3"/>' +
+					'<circle opacity="0.4" cx="290" cy="270" r="1.5"/>' +
+					'<circle opacity="0.5" cx="125" cy="148" r="1.5"/>' +
+					'<circle opacity="0.4" cx="200" cy="138" r="1.2"/>' +
+					'<circle opacity="0.4" cx="305" cy="148" r="1.3"/>' +
 					'</g>' +
 					'</svg>'
 				);
