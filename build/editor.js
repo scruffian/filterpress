@@ -953,7 +953,11 @@
 	}
 
 	function buildGrungeSVG( id, style, ruggedness, depth ) {
-		var dep = Math.round( depth * 100 ) / 100;
+		// Mask styles use very low-frequency noise (smoother chewing),
+		// so the same displacement scale produces less visible chew —
+		// boost the scale to keep the depth slider meaningful.
+		var depMul = isGrungeMaskStyle( style ) && style !== 'stamp' ? 2.5 : 1;
+		var dep = Math.round( depth * depMul * 100 ) / 100;
 		var noise = buildGrungeNoiseSVG( style, ruggedness );
 		var setup = grungeBaseShapeSVG( style );
 		var input = grungeChewInput( style );

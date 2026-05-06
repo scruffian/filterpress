@@ -1108,7 +1108,11 @@ class FilterPress {
 
 	private static function build_grunge_svg( $id, $style, $ruggedness, $depth ) {
 		$id_attr = esc_attr( $id );
-		$dep     = esc_attr( (string) round( max( 0, min( 200, (float) $depth ) ), 2 ) );
+		// Mask styles use very low-frequency noise (smoother chewing),
+		// so the same displacement scale produces less visible chew —
+		// boost the scale to keep the depth slider meaningful.
+		$dep_mul = ( 'brush' === $style || 'splat' === $style || 'burst' === $style ) ? 2.5 : 1;
+		$dep     = esc_attr( (string) round( max( 0, min( 200, (float) $depth ) ) * $dep_mul, 2 ) );
 		$noise   = self::grunge_noise_svg( $style, $ruggedness );
 		$setup   = self::grunge_base_shape_svg( $style );
 		$input   = self::grunge_chew_input( $style );
