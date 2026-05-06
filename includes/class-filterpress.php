@@ -859,6 +859,15 @@ class FilterPress {
 		$bw         = esc_attr( (string) $bw_int );
 		$off        = esc_attr( (string) $offset_val );
 		$bw_off     = esc_attr( (string) ( $bw_int + $offset_val ) );
+		// Linear alpha threshold whose slope scales with depth — at dep=0
+		// it's identity (y=x) so depth=0 produces the un-modified ring;
+		// higher depths sharpen toward a step function for chewed jaggies.
+		// This avoids the discontinuity that discrete thresholds caused
+		// when depth crossed from 0 to >0.
+		$slope     = 1.0 + (float) $dep_val;
+		$intercept = -0.5 * ( $slope - 1.0 );
+		$slope_str = esc_attr( (string) round( $slope, 3 ) );
+		$int_str   = esc_attr( (string) round( $intercept, 3 ) );
 		$noise      = self::grunge_noise_svg( $style, $ruggedness );
 
 		// Pipeline:
@@ -886,19 +895,9 @@ class FilterPress {
 			// inner overlap.
 			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
 			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
-			// Slight blur before the threshold ensures the alpha pattern is
-			// always anti-aliased — feDisplacementMap is exact at scale=0
-			// and bilinear at scale>0, which made the threshold behave
-			// differently and the border size appear to "jump" between
-			// depth 0 and 1. The blur removes that discontinuity.
-			. '<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>'
-			. '<feComponentTransfer in="softBorder" result="chewedBorderRaw">'
-			. '<feFuncA type="discrete" tableValues="0 0 1 1"/>'
+			. '<feComponentTransfer in="displacedBorder" result="chewedBorder">'
+			. '<feFuncA type="linear" slope="' . $slope_str . '" intercept="' . $int_str . '"/>'
 			. '</feComponentTransfer>'
-			// Clip the chewed border to the element box so chewed outer
-			// pixels can't extend past the original element edge — the
-			// image+border outer extent stays fixed regardless of depth.
-			. '<feComposite in="chewedBorderRaw" in2="SourceAlpha" operator="in" result="chewedBorder"/>'
 			. '<feMerge>'
 			. '<feMergeNode in="imageContent"/>'
 			. '<feMergeNode in="chewedBorder"/>'
