@@ -1094,9 +1094,12 @@
 			// behind chewed retreats in the inner overlap.
 			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
 			'<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' + dep + '" result="displacedBorder"/>' +
-			'<feComponentTransfer in="displacedBorder" result="chewedBorder">' +
+			'<feComponentTransfer in="displacedBorder" result="chewedBorderRaw">' +
 			'<feFuncA type="discrete" tableValues="0 0 0 1"/>' +
 			'</feComponentTransfer>' +
+			// Clip chewed border to element box — outer can't protrude past
+			// the original element edge regardless of depth.
+			'<feComposite in="chewedBorderRaw" in2="SourceAlpha" operator="in" result="chewedBorder"/>' +
 			'<feMerge>' +
 			'<feMergeNode in="imageContent"/>' +
 			'<feMergeNode in="chewedBorder"/>' +

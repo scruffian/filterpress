@@ -886,9 +886,13 @@ class FilterPress {
 			// inner overlap.
 			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
 			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
-			. '<feComponentTransfer in="displacedBorder" result="chewedBorder">'
+			. '<feComponentTransfer in="displacedBorder" result="chewedBorderRaw">'
 			. '<feFuncA type="discrete" tableValues="0 0 0 1"/>'
 			. '</feComponentTransfer>'
+			// Clip the chewed border to the element box so chewed outer
+			// pixels can't extend past the original element edge — the
+			// image+border outer extent stays fixed regardless of depth.
+			. '<feComposite in="chewedBorderRaw" in2="SourceAlpha" operator="in" result="chewedBorder"/>'
 			. '<feMerge>'
 			. '<feMergeNode in="imageContent"/>'
 			. '<feMergeNode in="chewedBorder"/>'

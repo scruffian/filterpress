@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FILTERPRESS_VERSION', '0.9.21' );
+define( 'FILTERPRESS_VERSION', '0.9.22' );
 define( 'FILTERPRESS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FILTERPRESS_URL', plugin_dir_url( __FILE__ ) );
 
