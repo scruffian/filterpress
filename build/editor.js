@@ -976,14 +976,14 @@
 		var r = Math.max( 0.005, Math.min( 0.2, ruggedness ) );
 		switch ( style ) {
 			case 'brush': {
+				// Two anisotropic noises (h + v streaks) averaged together
+				// so brush-drag features appear on every edge.
 				var bx = Math.round( r * 0.4 * 10000 ) / 10000;
 				var by = Math.round( Math.max( 0.15, r * 6 ) * 10000 ) / 10000;
 				return (
-					'<feTurbulence type="fractalNoise" baseFrequency="' +
-					bx +
-					' ' +
-					by +
-					'" numOctaves="2" result="noise"/>'
+					'<feTurbulence type="fractalNoise" baseFrequency="' + bx + ' ' + by + '" numOctaves="2" seed="1" result="hNoise"/>' +
+					'<feTurbulence type="fractalNoise" baseFrequency="' + by + ' ' + bx + '" numOctaves="2" seed="2" result="vNoise"/>' +
+					'<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>'
 				);
 			}
 			case 'stamp': {

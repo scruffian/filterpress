@@ -893,11 +893,15 @@ class FilterPress {
 		$r = max( 0.005, min( 0.2, (float) $ruggedness ) );
 		switch ( $style ) {
 			case 'brush':
-				// Anisotropic noise: long-along-x, short-along-y → horizontal
-				// streaks, like dry-bristle drag marks.
+				// Two anisotropic noises (horizontal + vertical streaks)
+				// averaged together so streaky brush-drag features show
+				// up on every edge of the ring — top/bottom pick up the
+				// h-streaks, left/right pick up the v-streaks.
 				$bx = esc_attr( (string) round( $r * 0.4, 4 ) );
 				$by = esc_attr( (string) round( max( 0.15, $r * 6 ), 4 ) );
-				return '<feTurbulence type="fractalNoise" baseFrequency="' . $bx . ' ' . $by . '" numOctaves="2" result="noise"/>';
+				return '<feTurbulence type="fractalNoise" baseFrequency="' . $bx . ' ' . $by . '" numOctaves="2" seed="1" result="hNoise"/>'
+					. '<feTurbulence type="fractalNoise" baseFrequency="' . $by . ' ' . $bx . '" numOctaves="2" seed="2" result="vNoise"/>'
+					. '<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>';
 
 			case 'stamp':
 				// Low-frequency single-octave noise → big chunky blobs, like
