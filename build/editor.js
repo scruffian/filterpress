@@ -1095,7 +1095,9 @@
 			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
 			'<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' + dep + '" result="displacedBorder"/>' +
 			'<feComponentTransfer in="displacedBorder" result="chewedBorderRaw">' +
-			'<feFuncA type="discrete" tableValues="0 0 0 1"/>' +
+			// Lenient threshold (alpha >= 0.5 → 1) keeps interpolated edge
+			// pixels so the border doesn't shrink when depth changes 0 → 1.
+			'<feFuncA type="discrete" tableValues="0 0 1 1"/>' +
 			'</feComponentTransfer>' +
 			// Clip chewed border to element box — outer can't protrude past
 			// the original element edge regardless of depth.
