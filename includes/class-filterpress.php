@@ -861,31 +861,29 @@ class FilterPress {
 		$bw_off     = esc_attr( (string) ( $bw_int + $offset_val ) );
 		$noise      = self::grunge_noise_svg( $style, $ruggedness );
 
-		// Pipeline (offset = 0 reduces to plain "chew the rendered border"):
+		// Pipeline:
 		//   1. Original border ring → coloredBorder (sample CSS border colour).
-		//   2. Build SHIFTED ring `offset` pixels inward via two new erodes:
-		//      shiftedOuter at `offset` inside element edge, shiftedInner at
-		//      `bw + offset` inside element edge.
+		//   2. Build a thicker ring with outer edge at element edge (no
+		//      outward shift) and inner edge at `bw + offset` inset, so
+		//      the image+border outer extent is preserved.
 		//   3. Dilate coloredBorder by `offset` so its colour reaches the
-		//      shifted ring's location (max-per-channel preserves CSS
-		//      border colour, so palette presets keep working).
-		//   4. Intersect to get the colored ring at the shifted position.
-		//   5. imageContent clips to shiftedInner so the image's edge
-		//      aligns with the new chewed inner edge (no exposed gap).
-		//   6. Chew the shifted colored border + merge.
+		//      new inner edge (max-per-channel preserves palette presets).
+		//   4. Intersect to colour the thicker ring.
+		//   5. imageContent clips to the original content area; the chewed
+		//      border can invade the image's outer rim from inside.
+		//   6. Chew the colored border + merge.
 		return '<filter id="' . $id_attr . '" x="-50%" y="-50%" width="200%" height="200%">'
 			. $noise
 			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw . '" result="contentMaskOriginal"/>'
 			. '<feComposite in="SourceAlpha" in2="contentMaskOriginal" operator="out" result="borderMaskOriginal"/>'
 			. '<feComposite in="SourceGraphic" in2="borderMaskOriginal" operator="in" result="coloredBorder"/>'
-			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $off . '" result="shiftedOuter"/>'
-			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw_off . '" result="shiftedInner"/>'
-			. '<feComposite in="shiftedOuter" in2="shiftedInner" operator="out" result="shiftedBorderMask"/>'
+			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw_off . '" result="extendedInner"/>'
+			. '<feComposite in="SourceAlpha" in2="extendedInner" operator="out" result="extendedBorderMask"/>'
 			. '<feMorphology in="coloredBorder" operator="dilate" radius="' . $off . '" result="extendedColoredBorder"/>'
-			. '<feComposite in="extendedColoredBorder" in2="shiftedBorderMask" operator="in" result="shiftedColoredBorder"/>'
-			// Image extends to the original content edge (not the shifted
+			. '<feComposite in="extendedColoredBorder" in2="extendedBorderMask" operator="in" result="shiftedColoredBorder"/>'
+			// Image extends to the original content edge (not the new
 			// inner edge), so it shows through chewed retreats in the
-			// inner overlap between the shifted ring and the image.
+			// inner overlap.
 			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
 			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
 			. '<feComponentTransfer in="displacedBorder" result="chewedBorder">'

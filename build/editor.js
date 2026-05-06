@@ -1077,21 +1077,19 @@
 		var depCapped = Math.min( depth, Math.max( 2 * borderWidth, 2 ) );
 		var dep = Math.round( depCapped * 100 ) / 100;
 		var noise = buildGrungeNoiseSVG( style, ruggedness );
-		// See PHP build_grunge_border_svg(). Pipeline rebuilds the border
-		// ring at a position shifted inward by `offset`, dilates the
-		// original colored border to fill the new shape, and clips
-		// imageContent to the shifted inner edge.
+		// See PHP build_grunge_border_svg(). Pipeline builds a thicker
+		// ring with outer edge at element edge and inner edge at bw+offset
+		// inset, so the image+border outer extent is preserved.
 		return (
 			'<filter id="' + id + '" x="-50%" y="-50%" width="200%" height="200%">' +
 			noise +
 			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bw + '" result="contentMaskOriginal"/>' +
 			'<feComposite in="SourceAlpha" in2="contentMaskOriginal" operator="out" result="borderMaskOriginal"/>' +
 			'<feComposite in="SourceGraphic" in2="borderMaskOriginal" operator="in" result="coloredBorder"/>' +
-			'<feMorphology in="SourceAlpha" operator="erode" radius="' + off + '" result="shiftedOuter"/>' +
-			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bwOff + '" result="shiftedInner"/>' +
-			'<feComposite in="shiftedOuter" in2="shiftedInner" operator="out" result="shiftedBorderMask"/>' +
+			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bwOff + '" result="extendedInner"/>' +
+			'<feComposite in="SourceAlpha" in2="extendedInner" operator="out" result="extendedBorderMask"/>' +
 			'<feMorphology in="coloredBorder" operator="dilate" radius="' + off + '" result="extendedColoredBorder"/>' +
-			'<feComposite in="extendedColoredBorder" in2="shiftedBorderMask" operator="in" result="shiftedColoredBorder"/>' +
+			'<feComposite in="extendedColoredBorder" in2="extendedBorderMask" operator="in" result="shiftedColoredBorder"/>' +
 			// Image extends to the original content edge so it's visible
 			// behind chewed retreats in the inner overlap.
 			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
