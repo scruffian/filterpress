@@ -843,61 +843,38 @@ class FilterPress {
 	 * @return string
 	 */
 	private static function build_grunge_border_svg( $id, $style, $ruggedness, $depth, $border_width ) {
-		$id_attr    = esc_attr( $id );
-		$bw_val     = max( 0, (float) $border_width );
-		// Auto-derive offset = ½·bw, rounded to integer pixels so feMorphology
-		// kernels are well-defined across browsers (sub-pixel radii can be
-		// rounded inconsistently and produce empty masks).
-		$offset_val = (int) round( $bw_val / 2 );
-		$bw_int     = (int) round( $bw_val );
-		// Cap displacement at 2*bw so the chewed border stays roughly
-		// proportional to the user's CSS border width.
-		$dep_val    = min(
-			max( 0, min( 200, (float) $depth ) ),
-			max( 2 * $bw_val, 2.0 )
-		);
-		$dep        = esc_attr( (string) round( $dep_val, 2 ) );
-		$bw         = esc_attr( (string) $bw_int );
-		$off        = esc_attr( (string) $offset_val );
-		$bw_off     = esc_attr( (string) ( $bw_int + $offset_val ) );
-		$noise      = self::grunge_noise_svg( $style, $ruggedness );
+		$id_attr = esc_attr( $id );
+		// Integer-rounded radii — sub-pixel feMorphology kernels are
+		// rounded inconsistently across browsers.
+		$bw      = (int) round( max( 0, (float) $border_width ) );
+		$off     = (int) round( $bw / 2 );
+		$bw_off  = $bw + $off;
+		// Cap displacement at 2·bw so the chew stays proportional to
+		// border width.
+		$dep     = round( min( max( 0, (float) $depth ), max( 2 * $bw, 2.0 ) ), 2 );
+		$noise   = self::grunge_noise_svg( $style, $ruggedness );
 
-		// Pipeline:
-		//   1. Original border ring → coloredBorder (sample CSS border colour).
-		//   2. Build a thicker ring with outer edge at element edge (no
-		//      outward shift) and inner edge at `bw + offset` inset, so
-		//      the image+border outer extent is preserved.
-		//   3. Dilate coloredBorder by `offset` so its colour reaches the
-		//      new inner edge (max-per-channel preserves palette presets).
-		//   4. Intersect to colour the thicker ring.
-		//   5. imageContent clips to the original content area; the chewed
-		//      border can invade the image's outer rim from inside.
-		//   6. Chew the colored border + merge.
+		// Pipeline: extract original CSS border ring with its colour, build
+		// a thicker ring centred on the original border line (outer at the
+		// element edge, inner extended bw/2 inward), chew it, merge over
+		// the un-displaced image content.
 		return '<filter id="' . $id_attr . '" x="-50%" y="-50%" width="200%" height="200%">'
 			. $noise
-			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw . '" result="contentMaskOriginal"/>'
-			. '<feComposite in="SourceAlpha" in2="contentMaskOriginal" operator="out" result="borderMaskOriginal"/>'
-			. '<feComposite in="SourceGraphic" in2="borderMaskOriginal" operator="in" result="coloredBorder"/>'
-			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw_off . '" result="extendedInner"/>'
-			. '<feComposite in="SourceAlpha" in2="extendedInner" operator="out" result="extendedBorderMask"/>'
-			. '<feMorphology in="coloredBorder" operator="dilate" radius="' . $off . '" result="extendedColoredBorder"/>'
-			. '<feComposite in="extendedColoredBorder" in2="extendedBorderMask" operator="in" result="shiftedColoredBorder"/>'
-			// Image extends to the original content edge (not the new
-			// inner edge), so it shows through chewed retreats in the
-			// inner overlap.
-			. '<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>'
-			. '<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' . $dep . '" result="displacedBorder"/>'
-			// Constant blur + constant linear threshold: same edge sharpness
-			// at all depths. The displacement adds variation but doesn't
-			// change the underlying edge processing, so size stays constant
-			// across depth values.
-			. '<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>'
-			. '<feComponentTransfer in="softBorder" result="chewedBorder">'
-			. '<feFuncA type="linear" slope="8" intercept="-3.5"/>'
+			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw . '" result="contentMask"/>'
+			. '<feComposite in="SourceAlpha" in2="contentMask" operator="out" result="borderMask"/>'
+			. '<feComposite in="SourceGraphic" in2="borderMask" operator="in" result="coloredBorder"/>'
+			. '<feMorphology in="SourceAlpha" operator="erode" radius="' . $bw_off . '" result="thickInner"/>'
+			. '<feComposite in="SourceAlpha" in2="thickInner" operator="out" result="thickMask"/>'
+			. '<feMorphology in="coloredBorder" operator="dilate" radius="' . $off . '" result="extendedColor"/>'
+			. '<feComposite in="extendedColor" in2="thickMask" operator="in" result="ring"/>'
+			. '<feComposite in="SourceGraphic" in2="contentMask" operator="in" result="image"/>'
+			. '<feDisplacementMap in="ring" in2="noise" scale="' . $dep . '" result="displaced"/>'
+			. '<feComponentTransfer in="displaced" result="chewed">'
+			. '<feFuncA type="discrete" tableValues="0 0 1 1"/>'
 			. '</feComponentTransfer>'
 			. '<feMerge>'
-			. '<feMergeNode in="imageContent"/>'
-			. '<feMergeNode in="chewedBorder"/>'
+			. '<feMergeNode in="image"/>'
+			. '<feMergeNode in="chewed"/>'
 			. '</feMerge>'
 			. '</filter>';
 	}

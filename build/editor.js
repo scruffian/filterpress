@@ -1069,45 +1069,35 @@
 	}
 
 	function buildGrungeBorderSVG( id, style, ruggedness, depth, borderWidth ) {
-		// Round morphology radii to integer pixels — sub-pixel kernels are
-		// rounded inconsistently across browsers and can produce empty masks.
-		var bwInt = Math.round( borderWidth );
-		var offsetInt = Math.round( borderWidth / 2 );
-		var bw = bwInt;
-		var off = offsetInt;
-		var bwOff = bwInt + offsetInt;
-		// Cap displacement at 2*bw so the chewed border stays proportional
-		// to the user's CSS border width.
-		var depCapped = Math.min( depth, Math.max( 2 * borderWidth, 2 ) );
-		var dep = Math.round( depCapped * 100 ) / 100;
+		// Integer-rounded radii — sub-pixel kernels are rounded
+		// inconsistently across browsers.
+		var bw = Math.round( borderWidth );
+		var off = Math.round( borderWidth / 2 );
+		var bwOff = bw + off;
+		// Cap displacement at 2·bw so the chew stays proportional to
+		// the border width.
+		var dep =
+			Math.round( Math.min( depth, Math.max( 2 * borderWidth, 2 ) ) * 100 ) /
+			100;
 		var noise = buildGrungeNoiseSVG( style, ruggedness );
-		// See PHP build_grunge_border_svg(). Pipeline builds a thicker
-		// ring with outer edge at element edge and inner edge at bw+offset
-		// inset, so the image+border outer extent is preserved.
 		return (
 			'<filter id="' + id + '" x="-50%" y="-50%" width="200%" height="200%">' +
 			noise +
-			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bw + '" result="contentMaskOriginal"/>' +
-			'<feComposite in="SourceAlpha" in2="contentMaskOriginal" operator="out" result="borderMaskOriginal"/>' +
-			'<feComposite in="SourceGraphic" in2="borderMaskOriginal" operator="in" result="coloredBorder"/>' +
-			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bwOff + '" result="extendedInner"/>' +
-			'<feComposite in="SourceAlpha" in2="extendedInner" operator="out" result="extendedBorderMask"/>' +
-			'<feMorphology in="coloredBorder" operator="dilate" radius="' + off + '" result="extendedColoredBorder"/>' +
-			'<feComposite in="extendedColoredBorder" in2="extendedBorderMask" operator="in" result="shiftedColoredBorder"/>' +
-			// Image extends to the original content edge so it's visible
-			// behind chewed retreats in the inner overlap.
-			'<feComposite in="SourceGraphic" in2="contentMaskOriginal" operator="in" result="imageContent"/>' +
-			'<feDisplacementMap in="shiftedColoredBorder" in2="noise" scale="' + dep + '" result="displacedBorder"/>' +
-			// Constant blur + linear threshold: same edge sharpness at all
-			// depths. Displacement adds variation but doesn't change edge
-			// processing, so border size stays constant across depths.
-			'<feGaussianBlur in="displacedBorder" stdDeviation="0.5" result="softBorder"/>' +
-			'<feComponentTransfer in="softBorder" result="chewedBorder">' +
-			'<feFuncA type="linear" slope="8" intercept="-3.5"/>' +
+			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bw + '" result="contentMask"/>' +
+			'<feComposite in="SourceAlpha" in2="contentMask" operator="out" result="borderMask"/>' +
+			'<feComposite in="SourceGraphic" in2="borderMask" operator="in" result="coloredBorder"/>' +
+			'<feMorphology in="SourceAlpha" operator="erode" radius="' + bwOff + '" result="thickInner"/>' +
+			'<feComposite in="SourceAlpha" in2="thickInner" operator="out" result="thickMask"/>' +
+			'<feMorphology in="coloredBorder" operator="dilate" radius="' + off + '" result="extendedColor"/>' +
+			'<feComposite in="extendedColor" in2="thickMask" operator="in" result="ring"/>' +
+			'<feComposite in="SourceGraphic" in2="contentMask" operator="in" result="image"/>' +
+			'<feDisplacementMap in="ring" in2="noise" scale="' + dep + '" result="displaced"/>' +
+			'<feComponentTransfer in="displaced" result="chewed">' +
+			'<feFuncA type="discrete" tableValues="0 0 1 1"/>' +
 			'</feComponentTransfer>' +
 			'<feMerge>' +
-			'<feMergeNode in="imageContent"/>' +
-			'<feMergeNode in="chewedBorder"/>' +
+			'<feMergeNode in="image"/>' +
+			'<feMergeNode in="chewed"/>' +
 			'</feMerge>' +
 			'</filter>'
 		);
