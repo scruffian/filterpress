@@ -976,6 +976,9 @@
 
 	function buildGrungeNoiseSVG( style, ruggedness ) {
 		var r = Math.max( 0.005, Math.min( 0.2, ruggedness ) );
+		if ( style === 'brush' || style === 'splat' || style === 'burst' ) {
+			r = r >= 0.1 ? ( r - 0.1 ) * 1.95 + 0.005 : r * 0.05;
+		}
 		switch ( style ) {
 			case 'brush': {
 				// Two anisotropic noises (h + v streaks) averaged together

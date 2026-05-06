@@ -891,6 +891,11 @@ class FilterPress {
 	 */
 	private static function grunge_noise_svg( $style, $ruggedness ) {
 		$r = max( 0.005, min( 0.2, (float) $ruggedness ) );
+		// Mask styles look best at very low ruggedness; piecewise-remap so the
+		// bottom half of the slider expands below the old floor.
+		if ( 'brush' === $style || 'splat' === $style || 'burst' === $style ) {
+			$r = $r >= 0.1 ? ( $r - 0.1 ) * 1.95 + 0.005 : $r * 0.05;
+		}
 		switch ( $style ) {
 			case 'brush':
 				// Two anisotropic noises (horizontal + vertical streaks)
