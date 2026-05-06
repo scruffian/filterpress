@@ -656,8 +656,12 @@
 				[ 'torn', 'brush', 'stamp' ].indexOf( grunge.style ) >= 0
 					? grunge.style
 					: 'torn';
-			var hasGrunge =
-				Boolean( grunge ) && grungeDepth > 0 && isGrungeBlock( props.name );
+			// hasGrunge is independent of depth — the filter still produces
+			// the colored ring at depth=0 (just no chewing). Gating on
+			// depth>0 caused a visible "jump" in border size when the user
+			// transitioned depth 0 → 1 because the filter would suddenly
+			// turn on and reshape the border.
+			var hasGrunge = Boolean( grunge ) && isGrungeBlock( props.name );
 			var grungePaint = hasGrunge ? borderPaintInfo( props.attributes ) : null;
 			var grungeId = null;
 			if ( hasGrunge ) {

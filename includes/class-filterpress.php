@@ -277,9 +277,10 @@ class FilterPress {
 			? $g['style']
 			: 'torn';
 
-		if ( $depth <= 0 ) {
-			return $block_content;
-		}
+		// Note: we intentionally don't bail when depth === 0. The filter
+		// still produces the un-displaced colored ring at depth=0; gating
+		// on depth>0 caused a visible border-size jump when the user
+		// transitioned depth 0 → 1.
 
 		$rug_int   = (int) round( $ruggedness * 1000 );
 		$depth_int = (int) round( $depth * 10 );
