@@ -940,18 +940,22 @@ class FilterPress {
 		// filter primitive subregions.
 		switch ( $style ) {
 			case 'brush':
-				// Tapered horizontal stroke + two layers of bristle drag
-				// marks above/below + trailing splatter dots. The visual
-				// "grunge" lives in the path geometry, not turbulence.
+				// Multi-opacity paintbrush stroke: heavy main body, two
+				// progressively fainter bristle drag marks above and below,
+				// trailing splatter at varying opacity. Brush's chew
+				// pipeline preserves alpha (no threshold), so these opacity
+				// levels translate to visible transparency variation.
 				return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" preserveAspectRatio="none">'
 					. '<g fill="#fff">'
-					. '<path d="M 100 198 C 102 180 115 167 138 161 C 165 156 200 154 235 158 C 263 162 285 170 295 185 C 300 200 295 213 285 222 C 270 232 240 238 210 240 C 175 242 145 239 125 233 C 110 228 100 215 100 200 Z"/>'
-					. '<path d="M 130 152 C 160 149 220 148 260 153 L 263 158 C 220 153 160 154 130 158 Z"/>'
-					. '<path d="M 145 145 C 175 143 215 142 248 144 L 250 149 C 215 146 175 146 145 148 Z"/>'
-					. '<path d="M 135 248 C 170 251 220 252 255 250 L 252 244 C 220 246 170 246 135 244 Z"/>'
-					. '<path d="M 150 254 C 180 256 215 256 240 254 L 240 250 C 215 252 180 252 150 250 Z"/>'
-					. '<circle cx="285" cy="225" r="1.5"/>'
-					. '<circle cx="293" cy="215" r="2"/>'
+					. '<path opacity="0.95" d="M 110 200 C 115 185 125 180 145 178 C 175 175 215 174 250 178 C 275 181 290 188 295 200 C 298 210 290 220 280 222 C 250 228 175 228 140 224 C 120 220 110 215 110 200 Z"/>'
+					. '<path opacity="0.5" d="M 130 168 C 165 165 235 166 265 170 L 265 178 C 235 173 165 173 130 175 Z"/>'
+					. '<path opacity="0.25" d="M 145 158 C 175 156 225 157 245 159 L 245 164 C 225 161 175 161 145 162 Z"/>'
+					. '<path opacity="0.5" d="M 130 234 C 170 238 230 240 265 236 L 265 230 C 230 233 170 233 130 230 Z"/>'
+					. '<path opacity="0.25" d="M 150 244 C 175 246 225 247 245 245 L 245 240 C 225 243 175 243 150 240 Z"/>'
+					. '<circle opacity="0.7" cx="290" cy="220" r="2"/>'
+					. '<circle opacity="0.5" cx="298" cy="212" r="1.5"/>'
+					. '<circle opacity="0.4" cx="305" cy="218" r="1"/>'
+					. '<circle opacity="0.5" cx="105" cy="195" r="1.2"/>'
 					. '</g>'
 					. '</svg>';
 
@@ -1020,6 +1024,22 @@ class FilterPress {
 		return self::grunge_is_mask_style( $style ) ? 'baseShape' : 'SourceAlpha';
 	}
 
+	/**
+	 * Returns the feFuncA primitive used to threshold the chewed alpha for
+	 * a given style. Brush passes alpha through unchanged so the mask's
+	 * opacity variation reaches the output; torn and stamp use a hard
+	 * threshold for sharp jagged edges.
+	 *
+	 * @param string $style Style slug.
+	 * @return string
+	 */
+	private static function grunge_chew_funca_svg( $style ) {
+		if ( 'brush' === $style ) {
+			return '<feFuncA type="identity"/>';
+		}
+		return '<feFuncA type="discrete" tableValues="0 0 0 1"/>';
+	}
+
 	private static function build_grunge_svg( $id, $style, $ruggedness, $depth ) {
 		$id_attr = esc_attr( $id );
 		$dep     = esc_attr( (string) round( max( 0, min( 200, (float) $depth ) ), 2 ) );
@@ -1032,7 +1052,7 @@ class FilterPress {
 			. $setup
 			. '<feDisplacementMap in="' . $input . '" in2="noise" scale="' . $dep . '" result="displacedAlpha"/>'
 			. '<feComponentTransfer in="displacedAlpha" result="mask">'
-			. '<feFuncA type="discrete" tableValues="0 0 0 1"/>'
+			. self::grunge_chew_funca_svg( $style )
 			. '</feComponentTransfer>'
 			. '<feComposite in="SourceGraphic" in2="mask" operator="in"/>'
 			. '</filter>';
