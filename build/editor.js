@@ -477,12 +477,13 @@
 				var grungeStyleOptions = [
 					{ label: __( 'Torn', 'filterpress' ), value: 'torn' },
 					{ label: __( 'Brush', 'filterpress' ), value: 'brush' },
+					{ label: __( 'Splat', 'filterpress' ), value: 'splat' },
 					{ label: __( 'Stamp', 'filterpress' ), value: 'stamp' },
 				];
 				var grungeStyle =
 					grunge &&
 					typeof grunge.style === 'string' &&
-					[ 'torn', 'brush', 'stamp' ].indexOf( grunge.style ) >= 0
+					[ 'torn', 'brush', 'splat', 'stamp' ].indexOf( grunge.style ) >= 0
 						? grunge.style
 						: 'torn';
 
@@ -653,7 +654,7 @@
 			var grungeCanvasStyle =
 				grunge &&
 				typeof grunge.style === 'string' &&
-				[ 'torn', 'brush', 'stamp' ].indexOf( grunge.style ) >= 0
+				[ 'torn', 'brush', 'splat', 'stamp' ].indexOf( grunge.style ) >= 0
 					? grunge.style
 					: 'torn';
 			// hasGrunge is independent of depth — the filter still produces
@@ -963,7 +964,7 @@
 			'<feComponentTransfer in="displacedAlpha" result="mask">' +
 			// Brush passes alpha through (preserves mask opacity); torn
 			// and stamp use a hard threshold for sharp jagged edges.
-			( style === 'brush'
+			( style === 'brush' || style === 'splat'
 				? '<feFuncA type="identity"/>'
 				: '<feFuncA type="discrete" tableValues="0 0 0 1"/>' ) +
 			'</feComponentTransfer>' +
@@ -983,6 +984,17 @@
 				return (
 					'<feTurbulence type="fractalNoise" baseFrequency="' + bx + ' ' + by + '" numOctaves="2" seed="1" result="hNoise"/>' +
 					'<feTurbulence type="fractalNoise" baseFrequency="' + by + ' ' + bx + '" numOctaves="2" seed="2" result="vNoise"/>' +
+					'<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>'
+				);
+			}
+			case 'splat': {
+				// More extreme variant of brush — longer streaks, more
+				// octaves for finer detail.
+				var sbx = Math.round( r * 0.25 * 10000 ) / 10000;
+				var sby = Math.round( Math.max( 0.2, r * 9 ) * 10000 ) / 10000;
+				return (
+					'<feTurbulence type="fractalNoise" baseFrequency="' + sbx + ' ' + sby + '" numOctaves="3" seed="3" result="hNoise"/>' +
+					'<feTurbulence type="fractalNoise" baseFrequency="' + sby + ' ' + sbx + '" numOctaves="3" seed="5" result="vNoise"/>' +
 					'<feComposite in="hNoise" in2="vNoise" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="noise"/>'
 				);
 			}
@@ -1007,7 +1019,7 @@
 	}
 
 	function isGrungeMaskStyle( style ) {
-		return style === 'brush' || style === 'stamp';
+		return style === 'brush' || style === 'splat' || style === 'stamp';
 	}
 
 	function grungeMaskSVG( style ) {
@@ -1021,6 +1033,23 @@
 					'<path opacity="0.85" d="M 102 195 C 108 175 125 170 145 175 C 165 173 188 180 210 175 C 230 172 250 178 270 180 C 285 182 295 188 305 195 L 322 196 C 326 201 322 206 305 206 L 295 207 C 290 218 268 222 245 224 C 220 220 195 226 170 222 C 150 219 130 224 115 217 C 100 212 95 202 102 195 Z"/>' +
 					'<circle opacity="0.5" cx="332" cy="208" r="2"/>' +
 					'<circle opacity="0.3" cx="340" cy="214" r="1"/>' +
+					'</g>' +
+					'</svg>'
+				);
+			case 'splat':
+				return (
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" preserveAspectRatio="none">' +
+					'<g fill="#fff">' +
+					'<path opacity="0.85" d="M 88 198 C 92 168 118 160 145 168 C 168 165 192 180 218 170 C 245 165 272 182 295 175 C 315 178 332 198 326 218 C 312 232 282 222 258 230 C 230 236 200 226 175 232 C 150 230 128 238 108 228 C 88 218 78 208 88 198 Z"/>' +
+					'<path opacity="0.55" d="M 320 195 C 338 192 350 198 348 215 C 340 222 325 218 320 213 Z"/>' +
+					'<path opacity="0.45" d="M 195 230 C 197 245 198 255 192 252 C 188 246 188 235 192 230 Z"/>' +
+					'<circle opacity="0.7" cx="350" cy="220" r="2.5"/>' +
+					'<circle opacity="0.5" cx="362" cy="225" r="1.8"/>' +
+					'<circle opacity="0.4" cx="370" cy="218" r="1.2"/>' +
+					'<circle opacity="0.5" cx="78" cy="195" r="2"/>' +
+					'<circle opacity="0.4" cx="62" cy="200" r="1.5"/>' +
+					'<circle opacity="0.6" cx="190" cy="262" r="1.8"/>' +
+					'<circle opacity="0.4" cx="220" cy="270" r="1.2"/>' +
 					'</g>' +
 					'</svg>'
 				);
