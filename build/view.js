@@ -61,10 +61,7 @@ store( 'filterpress', {
 				return;
 			}
 
-			if ( ! map.dataset.fpTargetScale ) {
-				map.dataset.fpTargetScale = map.getAttribute( 'scale' ) || '0';
-			}
-			const target = parseFloat( map.dataset.fpTargetScale ) || 0;
+			const target = ctx.targetScale || 0;
 			const current = parseFloat( map.getAttribute( 'scale' ) ) || 0;
 
 			ctx.on = true;
