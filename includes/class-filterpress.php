@@ -39,6 +39,16 @@ class FilterPress {
 	private static $rendered_turbulences = array();
 
 	/**
+	 * Per-page counter used to give every turbulence-enabled button its own
+	 * filter id. The displacement map's `scale` attribute is mutated by the
+	 * Interactivity store on press/release; sharing one filter node across
+	 * buttons would make their animations fight.
+	 *
+	 * @var int
+	 */
+	private static $turbulence_instance = 0;
+
+	/**
 	 * Squiggle (animated text wiggle) filter variants used on the current page.
 	 *
 	 * @var array<string, array>
@@ -427,7 +437,16 @@ class FilterPress {
 
 		$freq_int  = (int) round( $base_freq * 1000 );
 		$scale_int = (int) round( $scale * 10 );
-		$id        = sprintf( 'filterpress-turb-%s-%d-%d', $effect, $freq_int, $scale_int );
+		// Per-button instance so each button gets its own feDisplacementMap to
+		// animate, instead of fighting over a shared one.
+		++self::$turbulence_instance;
+		$id = sprintf(
+			'filterpress-turb-%s-%d-%d-%d',
+			$effect,
+			$freq_int,
+			$scale_int,
+			self::$turbulence_instance
+		);
 
 		self::$rendered_turbulences[ $id ] = array(
 			'effect'        => $effect,
@@ -441,7 +460,7 @@ class FilterPress {
 		}
 
 		$block_content = self::append_class_to_root( $block_content, $id );
-		$block_content = self::add_turbulence_directives( $block_content, $id );
+		$block_content = self::add_turbulence_directives( $block_content, $id, $scale );
 
 		return $block_content;
 	}
@@ -450,11 +469,12 @@ class FilterPress {
 	 * Adds Interactivity API directives to a button block so clicks animate the
 	 * turbulence-on state in and out.
 	 *
-	 * @param string $content   Block HTML.
-	 * @param string $filter_id The SVG filter id this button uses.
+	 * @param string $content      Block HTML.
+	 * @param string $filter_id    The SVG filter id this button uses.
+	 * @param float  $target_scale The pressed-state feDisplacementMap scale to animate to.
 	 * @return string
 	 */
-	private static function add_turbulence_directives( $content, $filter_id ) {
+	private static function add_turbulence_directives( $content, $filter_id, $target_scale ) {
 		if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
 			return $content;
 		}
@@ -469,8 +489,9 @@ class FilterPress {
 			'data-wp-context',
 			wp_json_encode(
 				array(
-					'on'       => false,
-					'filterId' => $filter_id,
+					'on'          => false,
+					'filterId'    => $filter_id,
+					'targetScale' => (float) $target_scale,
 				)
 			)
 		);
@@ -718,18 +739,20 @@ class FilterPress {
 	private static function build_turbulence_svg( $id, $effect, $base_freq, $scale ) {
 		$id_attr = esc_attr( $id );
 		$f       = esc_attr( (string) round( $base_freq, 4 ) );
-		$s       = esc_attr( (string) round( $scale, 2 ) );
+		// Rendered scale starts at 0 (resting state). The JS Interactivity store
+		// reads the press-state target from data-wp-context and animates the
+		// scale attribute on press/release.
+		unset( $scale );
 
 		switch ( $effect ) {
 			case 'rough':
 				return sprintf(
 					'<filter id="%1$s">'
 					. '<feTurbulence type="fractalNoise" baseFrequency="%2$s" numOctaves="3" result="noise"/>'
-					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="%3$s"/>'
+					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="0"/>'
 					. '</filter>',
 					$id_attr,
-					$f,
-					$s
+					$f
 				);
 
 			case 'ink':
@@ -737,34 +760,31 @@ class FilterPress {
 					'<filter id="%1$s">'
 					. '<feMorphology operator="dilate" radius="1" in="SourceGraphic" result="dilated"/>'
 					. '<feTurbulence type="fractalNoise" baseFrequency="%2$s" numOctaves="2" result="noise"/>'
-					. '<feDisplacementMap in="dilated" in2="noise" scale="%3$s"/>'
+					. '<feDisplacementMap in="dilated" in2="noise" scale="0"/>'
 					. '</filter>',
 					$id_attr,
-					$f,
-					$s
+					$f
 				);
 
 			case 'watercolor':
 				return sprintf(
 					'<filter id="%1$s">'
 					. '<feTurbulence type="fractalNoise" baseFrequency="%2$s" numOctaves="3" result="noise"/>'
-					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="%3$s" result="displaced"/>'
+					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="0" result="displaced"/>'
 					. '<feGaussianBlur in="displaced" stdDeviation="0.6"/>'
 					. '</filter>',
 					$id_attr,
-					$f,
-					$s
+					$f
 				);
 
 			case 'wavy':
 				return sprintf(
 					'<filter id="%1$s">'
 					. '<feTurbulence type="turbulence" baseFrequency="%2$s" numOctaves="2" result="noise"/>'
-					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="%3$s"/>'
+					. '<feDisplacementMap in="SourceGraphic" in2="noise" scale="0"/>'
 					. '</filter>',
 					$id_attr,
-					$f,
-					$s
+					$f
 				);
 		}
 
